@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { Avatar } from "../components/Avatar";
 import { CountChart } from "../components/CountChart";
 import { DonutChart } from "../components/DonutChart";
+import { StatTile } from "../components/StatTile";
+import { IconAlertTriangle, IconCheckCircle, IconInbox, IconTrendingUp } from "../components/icons";
 import { CURRENCY_FORMATTER, type TenantStats } from "../types/models";
 
 function shortDate(iso: string): string {
@@ -37,22 +40,25 @@ export function EstadisticasPage() {
       </div>
 
       <div className="stat-tile-row">
-        <div className="stat-tile">
-          <div className="stat-tile-label">Total pedidos</div>
-          <div className="stat-tile-value">{stats.totalOrders}</div>
-        </div>
-        <div className="stat-tile stat-tile-hero">
-          <div className="stat-tile-label">Ingresos totales</div>
-          <div className="stat-tile-value">{CURRENCY_FORMATTER.format(stats.estimatedRevenue)}</div>
-        </div>
-        <div className="stat-tile">
-          <div className="stat-tile-label">Entregados</div>
-          <div className="stat-tile-value">{stats.statusCounts.ENTREGADO}</div>
-        </div>
-        <div className="stat-tile">
-          <div className="stat-tile-label">Cancelados</div>
-          <div className="stat-tile-value">{stats.statusCounts.CANCELADO}</div>
-        </div>
+        <StatTile icon={<IconInbox width={20} height={20} />} label="Total pedidos" value={stats.totalOrders} />
+        <StatTile
+          icon={<IconTrendingUp width={20} height={20} />}
+          label="Ingresos totales"
+          value={CURRENCY_FORMATTER.format(stats.estimatedRevenue)}
+          tone="hero"
+        />
+        <StatTile
+          icon={<IconCheckCircle width={20} height={20} />}
+          label="Entregados"
+          value={stats.statusCounts.ENTREGADO}
+          tone="success"
+        />
+        <StatTile
+          icon={<IconAlertTriangle width={20} height={20} />}
+          label="Cancelados"
+          value={stats.statusCounts.CANCELADO}
+          tone="error"
+        />
       </div>
 
       <div className="dashboard-grid">
@@ -89,12 +95,12 @@ export function EstadisticasPage() {
       {stats.deliveriesByDriver.length > 0 && (
         <div className="card">
           <h2>Entregas por repartidor</h2>
-          <ul className="product-list">
+          <ul className="activity-list">
             {stats.deliveriesByDriver.map((d) => (
-              <li key={d.driverName} className="product-row">
+              <li key={d.driverName} className="activity-row" style={{ gridTemplateColumns: "auto 1fr auto" }}>
+                <Avatar name={d.driverName} size={30} />
                 <span>{d.driverName}</span>
                 <span className="text-muted">{d.count} entregas</span>
-                <span />
               </li>
             ))}
           </ul>

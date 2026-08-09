@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
+import { Avatar } from "../components/Avatar";
 import type { Driver, Order, TenantStats } from "../types/models";
 
 export function RepartidoresPage() {
@@ -58,22 +59,39 @@ export function RepartidoresPage() {
       </div>
 
       <div className="card">
-        <ul className="product-list">
+        <div className="driver-grid">
           {drivers.map((d) => (
-            <li key={d.id} className="driver-row">
-              <span className={`driver-status-dot${d.active ? "" : " driver-status-dot-off"}`} />
-              <div>
-                <div>{d.name}</div>
-                <span className="text-muted">{d.phone}</span>
+            <div key={d.id} className="driver-card">
+              <div className="driver-card-header">
+                <Avatar name={d.name} size={40} />
+                <div>
+                  <div className="driver-card-name">{d.name}</div>
+                  <span className="text-muted" style={{ fontSize: "0.8rem" }}>
+                    <span className={`driver-status-dot${d.active ? "" : " driver-status-dot-off"}`} />{" "}
+                    {d.active ? "Activo" : "Inactivo"}
+                  </span>
+                </div>
               </div>
-              <span className="text-muted">{activeCountByDriver.get(d.id) ?? 0} en curso</span>
-              <span className="text-muted">{deliveryCountByDriver.get(d.name) ?? 0} entregas</span>
+              <div className="driver-card-stats">
+                <div>
+                  <div className="driver-card-stat-value">{activeCountByDriver.get(d.id) ?? 0}</div>
+                  <span className="text-muted" style={{ fontSize: "0.75rem" }}>
+                    en curso
+                  </span>
+                </div>
+                <div>
+                  <div className="driver-card-stat-value">{deliveryCountByDriver.get(d.name) ?? 0}</div>
+                  <span className="text-muted" style={{ fontSize: "0.75rem" }}>
+                    entregas
+                  </span>
+                </div>
+              </div>
               <button className="btn btn-secondary" onClick={() => toggleActive(d)}>
                 {d.active ? "Desactivar" : "Activar"}
               </button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
 
       <div className="card">

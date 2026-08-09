@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/client";
-import { IconNavigation, IconTruck, IconUsers } from "../components/icons";
+import { Avatar } from "../components/Avatar";
+import { StatTile } from "../components/StatTile";
+import { IconCheckCircle, IconNavigation, IconTrendingUp, IconTruck, IconUsers } from "../components/icons";
+import { StatusPill } from "../components/StatusPill";
 import type { Order } from "../types/models";
 
 interface DriverSummary {
@@ -48,7 +51,10 @@ export function RepartidorView() {
   return (
     <div className="repartidor-shell">
       <header className="repartidor-header">
-        <span>Hola, {user?.name}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <Avatar name={user?.name ?? "?"} size={36} />
+          <span>Hola, {user?.name}</span>
+        </div>
         <button className="btn btn-secondary" onClick={logout}>
           Salir
         </button>
@@ -77,9 +83,10 @@ export function RepartidorView() {
 
           {orders.map((o) => (
             <div key={o.id} className="card">
-              <p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                 <strong>{o.customerPhone}</strong>
-              </p>
+                <StatusPill status={o.status} />
+              </div>
               {o.deliveryAddress && <p className="text-muted">{o.deliveryAddress}</p>}
               <ul className="order-items">
                 {o.items.map((it) => (
@@ -110,19 +117,28 @@ export function RepartidorView() {
 
       {tab === "perfil" && summary && (
         <div className="card">
-          <p>
-            <strong>{user?.name}</strong>
-          </p>
-          <p className="text-muted">{user?.tenantName}</p>
-          <div className="stat-tile-row" style={{ marginTop: "1rem" }}>
-            <div className="stat-tile">
-              <div className="stat-tile-label">Entregas hoy</div>
-              <div className="stat-tile-value">{summary.deliveredToday}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+            <Avatar name={user?.name ?? "?"} size={48} />
+            <div>
+              <strong>{user?.name}</strong>
+              <p className="text-muted" style={{ margin: 0 }}>
+                {user?.tenantName}
+              </p>
             </div>
-            <div className="stat-tile">
-              <div className="stat-tile-label">Entregas esta semana</div>
-              <div className="stat-tile-value">{summary.deliveredThisWeek}</div>
-            </div>
+          </div>
+          <div className="stat-tile-row">
+            <StatTile
+              icon={<IconCheckCircle width={20} height={20} />}
+              label="Entregas hoy"
+              value={summary.deliveredToday}
+              tone="success"
+            />
+            <StatTile
+              icon={<IconTrendingUp width={20} height={20} />}
+              label="Entregas esta semana"
+              value={summary.deliveredThisWeek}
+              tone="hero"
+            />
           </div>
         </div>
       )}

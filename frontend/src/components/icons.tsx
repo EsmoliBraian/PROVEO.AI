@@ -162,3 +162,24 @@ export function IconNavigation(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconTrendingUp(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="m3 16 6-6 4 4 8-9" />
+      <path d="M15 5h6v6" />
+    </svg>
+  );
+}
+
+export function IconRobot(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <rect x="4" y="8" width="16" height="11" rx="2.5" />
+      <path d="M12 8V4M9 4h6" />
+      <circle cx="9" cy="13.5" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="13.5" r="1.3" fill="currentColor" stroke="none" />
+      <path d="M9 17h6" />
+    </svg>
+  );
+}

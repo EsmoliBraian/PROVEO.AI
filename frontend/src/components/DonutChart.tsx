@@ -13,12 +13,17 @@ export function DonutChart({ data }: DonutChartProps) {
 
   return (
     <div className="donut-chart">
+      <div style={{ width: 220, height: 200, flexShrink: 0 }}>
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
           <Pie
             data={nonZero}
             dataKey="value"
             nameKey="label"
+            cx="50%"
+            cy="50%"
+            startAngle={90}
+            endAngle={-270}
             innerRadius={55}
             outerRadius={80}
             paddingAngle={2}
@@ -39,6 +44,7 @@ export function DonutChart({ data }: DonutChartProps) {
           />
         </PieChart>
       </ResponsiveContainer>
+      </div>
       <ul className="donut-legend">
         {nonZero.map((d) => (
           <li key={d.label}>

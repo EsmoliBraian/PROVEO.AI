@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { StatTile } from "../components/StatTile";
+import { IconSparkles } from "../components/icons";
 
 interface OrderNeedingReview {
   id: string;
@@ -70,11 +72,12 @@ export function AnalisisIAPage() {
       <div className="dashboard-grid">
         <div className="card">
           <h2>Precisión de interpretación</h2>
-          <div className="stat-tile stat-tile-hero">
-            <div className="stat-tile-value">
-              {analysis.avgConfidence != null ? `${Math.round(analysis.avgConfidence * 100)}%` : "—"}
-            </div>
-          </div>
+          <StatTile
+            icon={<IconSparkles width={20} height={20} />}
+            label="Confianza promedio de la IA"
+            value={analysis.avgConfidence != null ? `${Math.round(analysis.avgConfidence * 100)}%` : "—"}
+            tone="hero"
+          />
         </div>
 
         <div className="card">

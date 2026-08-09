@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { Avatar } from "../components/Avatar";
 import { DonutChart } from "../components/DonutChart";
 import { CountChart } from "../components/CountChart";
 import { StatusPill } from "../components/StatusPill";
-import { CURRENCY_FORMATTER, type Order, type TenantStats } from "../types/models";
+import { StatTile } from "../components/StatTile";
+import {
+  IconCheckCircle,
+  IconClock,
+  IconInbox,
+  IconRobot,
+  IconTrendingUp,
+  IconTruck,
+} from "../components/icons";
+import { CURRENCY_FORMATTER, type Order, type OrderStatus, type TenantStats } from "../types/models";
 
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -15,6 +25,15 @@ function relativeTime(iso: string): string {
   if (hours < 24) return `hace ${hours}h`;
   return `hace ${Math.floor(hours / 24)}d`;
 }
+
+const ACTIVITY_ICON: Record<OrderStatus, JSX.Element> = {
+  NUEVO: <IconRobot width={16} height={16} />,
+  EN_PROCESO: <IconClock width={16} height={16} />,
+  EN_CAMINO: <IconTruck width={16} height={16} />,
+  ENTREGADO: <IconCheckCircle width={16} height={16} />,
+  CANCELADO: <IconClock width={16} height={16} />,
+  REQUIERE_REVISION: <IconClock width={16} height={16} />,
+};
 
 export function DashboardPage() {
   const [stats, setStats] = useState<TenantStats | null>(null);
@@ -61,22 +80,25 @@ export function DashboardPage() {
       </div>
 
       <div className="stat-tile-row">
-        <div className="stat-tile">
-          <div className="stat-tile-label">Pedidos hoy</div>
-          <div className="stat-tile-value">{stats.today.orders}</div>
-        </div>
-        <div className="stat-tile">
-          <div className="stat-tile-label">En proceso</div>
-          <div className="stat-tile-value">{stats.statusCounts.EN_PROCESO}</div>
-        </div>
-        <div className="stat-tile">
-          <div className="stat-tile-label">Entregados</div>
-          <div className="stat-tile-value">{stats.statusCounts.ENTREGADO}</div>
-        </div>
-        <div className="stat-tile stat-tile-hero">
-          <div className="stat-tile-label">Ingresos hoy</div>
-          <div className="stat-tile-value">{CURRENCY_FORMATTER.format(stats.today.revenue)}</div>
-        </div>
+        <StatTile icon={<IconInbox width={20} height={20} />} label="Pedidos hoy" value={stats.today.orders} />
+        <StatTile
+          icon={<IconClock width={20} height={20} />}
+          label="En proceso"
+          value={stats.statusCounts.EN_PROCESO}
+          tone="warning"
+        />
+        <StatTile
+          icon={<IconCheckCircle width={20} height={20} />}
+          label="Entregados"
+          value={stats.statusCounts.ENTREGADO}
+          tone="success"
+        />
+        <StatTile
+          icon={<IconTrendingUp width={20} height={20} />}
+          label="Ingresos hoy"
+          value={CURRENCY_FORMATTER.format(stats.today.revenue)}
+          tone="hero"
+        />
       </div>
 
       <div className="dashboard-grid">
@@ -98,6 +120,9 @@ export function DashboardPage() {
             {recentActivity.map((o) => (
               <li key={o.id}>
                 <Link to={`/pedidos/${o.id}`} className="activity-row">
+                  <span className={`activity-icon activity-icon-${o.status.toLowerCase()}`}>
+                    {ACTIVITY_ICON[o.status]}
+                  </span>
                   <span>{o.customerPhone}</span>
                   <StatusPill status={o.status} />
                   <span className="text-muted">{relativeTime(o.receivedAt)}</span>
@@ -109,14 +134,12 @@ export function DashboardPage() {
         <div className="card">
           <h2>Top clientes</h2>
           {topClients.length === 0 && <p className="text-muted">Todavía no hay pedidos.</p>}
-          <ul className="product-list">
-            {topClients.map(([phone, count], i) => (
-              <li key={phone} className="product-row">
-                <span>
-                  {i + 1}. {phone}
-                </span>
+          <ul className="activity-list">
+            {topClients.map(([phone, count]) => (
+              <li key={phone} className="activity-row" style={{ gridTemplateColumns: "auto 1fr auto" }}>
+                <Avatar name={phone.slice(-2)} size={30} />
+                <span>{phone}</span>
                 <span className="text-muted">{count} pedidos</span>
-                <span />
               </li>
             ))}
           </ul>

@@ -23,6 +23,7 @@ export function LoginPage() {
 
   return (
     <div className="login-shell">
+      <div className="login-brand" />
       <form className="login-card" onSubmit={handleSubmit}>
         <h1 className="login-title">PROVEO.AI</h1>
         <p className="login-subtitle">Iniciá sesión para continuar</p>
