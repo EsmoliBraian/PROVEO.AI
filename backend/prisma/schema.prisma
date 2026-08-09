@@ -1,0 +1,170 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  OVERDUE
+  SUSPENDED
+}
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  REPARTIDOR
+}
+
+enum OrderStatus {
+  PENDING
+  DELIVERED
+  CANCELLED
+}
+
+/// Un distribuidor (cliente de PROVEO.AI). Toda tabla de negocio cuelga de un tenantId.
+model Tenant {
+  id                 String             @id @default(cuid())
+  name               String
+  subscriptionStatus SubscriptionStatus @default(ACTIVE)
+
+  /// Datos de conexión WhatsApp Cloud API de este tenant (Fase 1+, vía Embedded Signup).
+  whatsappPhoneNumberId String? @unique
+  whatsappWabaId        String?
+  /// Access token cifrado (ver TOKEN_ENCRYPTION_KEY) — nunca texto plano.
+  whatsappAccessToken   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  products  Product[]
+  customers Customer[]
+  orders    Order[]
+
+  @@index([whatsappPhoneNumberId])
+}
+
+/// Cuenta de acceso al panel. tenantId null solo para SUPER_ADMIN (cross-tenant).
+model User {
+  id           String  @id @default(cuid())
+  tenantId     String?
+  tenant       Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role         Role
+  name         String
+  /// Login del TENANT_ADMIN por email; del REPARTIDOR normalmente por celular.
+  email        String? @unique
+  phone        String? @unique
+  passwordHash String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedOrders Order[] @relation("AssignedDriver")
+
+  @@index([tenantId])
+}
+
+model Product {
+  id        String         @id @default(cuid())
+  tenantId  String
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  price     Decimal        @db.Decimal(10, 2)
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  aliases   ProductAlias[]
+  orderItems OrderItem[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+/// Sinónimos con los que un cliente puede nombrar un producto por WhatsApp
+/// (ej. "bolsa de hielo" y "bolsita" para el mismo Product) — contexto que
+/// tanto el parser por reglas como el parser IA usan para mapear texto libre.
+model ProductAlias {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tenantId  String
+  alias     String
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, alias])
+  @@index([productId])
+}
+
+model Customer {
+  id        String          @id @default(cuid())
+  tenantId  String
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  notes     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  phones    CustomerPhone[]
+  orders    Order[]
+
+  @@index([tenantId])
+}
+
+model CustomerPhone {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tenantId   String
+  phone      String
+  createdAt  DateTime @default(now())
+
+  @@unique([tenantId, phone])
+  @@index([customerId])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerPhone   String
+  rawMessage      String
+  receivedAt      DateTime
+  status          OrderStatus @default(PENDING)
+  deliveryAddress String?
+  deliveredAt     DateTime?
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  /// Repartidor asignado para entregar este pedido (Fase 2).
+  assignedDriverId String?
+  assignedDriver   User?   @relation("AssignedDriver", fields: [assignedDriverId], references: [id], onDelete: SetNull)
+
+  /// Confianza [0,1] que reportó el parser IA (Fase 1) — baja confianza
+  /// marca el pedido para revisión humana en el panel en vez de asumir.
+  aiConfidence Float?
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  items     OrderItem[]
+
+  @@index([tenantId, status, receivedAt])
+  @@index([tenantId, customerPhone, receivedAt])
+  @@index([assignedDriverId])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  rawFragment String
+  quantity    Int
+  matched     Boolean  @default(true)
+
+  @@index([orderId])
+}

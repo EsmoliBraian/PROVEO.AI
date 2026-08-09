@@ -1,0 +1,7 @@
+{$APP_DOMAIN} {
+	log {
+		output stdout
+		format console
+	}
+	reverse_proxy frontend:80
+}
