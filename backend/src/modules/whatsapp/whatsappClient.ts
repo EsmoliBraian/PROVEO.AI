@@ -1,5 +1,20 @@
 const GRAPH_API_BASE = "https://graph.facebook.com/v20.0";
 
+/**
+ * Los números de celular argentinos llegan en los webhooks como "549..."
+ * (con el 9 extra que WhatsApp agrega para móviles AR), pero mientras la app
+ * de Meta esté en modo desarrollo/sin verificar, la lista de destinatarios
+ * de prueba autorizados se compara dígito a dígito contra "54..." (sin el
+ * 9) — así que responderle al valor crudo del webhook rebota con
+ * "Recipient phone number not in allowed list" aunque el número sí esté
+ * habilitado. Una vez que la app esté verificada/Live esta restricción de
+ * lista de prueba desaparece y este ajuste deja de ser necesario (Hielo
+ * Guala, ya en producción, nunca lo necesitó).
+ */
+export function toWhatsAppRecipient(rawFrom: string): string {
+  return rawFrom.startsWith("549") ? `54${rawFrom.slice(3)}` : rawFrom;
+}
+
 /** Envía un mensaje de texto por WhatsApp Cloud API usando las credenciales del tenant. */
 export async function sendWhatsAppMessage(
   phoneNumberId: string,

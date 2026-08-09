@@ -4,7 +4,7 @@ import { decryptSecret } from "../../lib/crypto.js";
 import { env } from "../../config/env.js";
 import { asyncHandler } from "../../middleware/errorHandler.js";
 import * as ordersService from "../orders/orders.service.js";
-import { sendWhatsAppMessage } from "./whatsappClient.js";
+import { sendWhatsAppMessage, toWhatsAppRecipient } from "./whatsappClient.js";
 
 export const whatsappRouter = Router();
 
@@ -61,7 +61,7 @@ whatsappRouter.post(
       await sendWhatsAppMessage(
         tenant.whatsappPhoneNumberId!,
         decryptSecret(tenant.whatsappAccessToken),
-        message.from,
+        toWhatsAppRecipient(message.from),
         replyText,
       );
     } catch (err) {
