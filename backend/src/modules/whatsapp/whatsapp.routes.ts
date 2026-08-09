@@ -39,8 +39,13 @@ whatsappRouter.post(
     }
 
     const tenant = await prisma.tenant.findUnique({ where: { whatsappPhoneNumberId: phoneNumberId } });
-    if (!tenant || !tenant.whatsappAccessToken) {
+    if (!tenant) {
       console.warn(`Mensaje de WhatsApp para un phone_number_id desconocido: ${phoneNumberId}`);
+      res.sendStatus(200);
+      return;
+    }
+    if (!tenant.whatsappAccessToken) {
+      console.warn(`Tenant ${tenant.id} (${tenant.name}) no tiene access token de WhatsApp configurado`);
       res.sendStatus(200);
       return;
     }
