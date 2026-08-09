@@ -8,6 +8,7 @@ import { productsRouter } from "./modules/products/products.routes.js";
 import { ordersRouter } from "./modules/orders/orders.routes.js";
 import { teamRouter } from "./modules/team/team.routes.js";
 import { whatsappRouter } from "./modules/whatsapp/whatsapp.routes.js";
+import { statsRouter } from "./modules/stats/stats.routes.js";
 
 export function createApp() {
   const app = express();
@@ -24,6 +25,7 @@ export function createApp() {
   app.use("/api/orders", ordersRouter);
   app.use("/api/team", teamRouter);
   app.use("/api/whatsapp", whatsappRouter);
+  app.use("/api/stats", statsRouter);
 
   app.use(errorHandler);
 

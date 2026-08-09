@@ -35,11 +35,28 @@ interface Order {
   assignedDriver: { id: string; name: string } | null;
 }
 
+interface Stats {
+  totalOrders: number;
+  deliveredOrders: number;
+  pendingOrders: number;
+  cancelledOrders: number;
+  estimatedRevenue: number;
+  topProducts: { productName: string; quantity: number; revenue: number }[];
+  deliveriesByDriver: { driverName: string; count: number }[];
+}
+
+const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  maximumFractionDigits: 0,
+});
+
 export function TenantAdminDashboard() {
   const { user, logout } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [driverForm, setDriverForm] = useState({ name: "", phone: "", password: "" });
 
@@ -48,10 +65,12 @@ export function TenantAdminDashboard() {
       api.get<Product[]>("/products"),
       api.get<Order[]>("/orders"),
       api.get<Driver[]>("/team/drivers"),
-    ]).then(([p, o, d]) => {
+      api.get<Stats>("/stats"),
+    ]).then(([p, o, d, s]) => {
       setProducts(p);
       setOrders(o);
       setDrivers(d);
+      setStats(s);
       setLoading(false);
     });
   }
@@ -83,6 +102,67 @@ export function TenantAdminDashboard() {
               Cerrar sesión
             </button>
           </header>
+
+          {stats && (
+            <section className="card">
+              <h2>Estadísticas</h2>
+              <div className="stat-tile-row">
+                <div className="stat-tile stat-tile-hero">
+                  <div className="stat-tile-label">Facturación estimada</div>
+                  <div className="stat-tile-value">{CURRENCY_FORMATTER.format(stats.estimatedRevenue)}</div>
+                </div>
+                <div className="stat-tile">
+                  <div className="stat-tile-label">Pedidos totales</div>
+                  <div className="stat-tile-value">{stats.totalOrders}</div>
+                </div>
+                <div className="stat-tile">
+                  <div className="stat-tile-label">Entregados</div>
+                  <div className="stat-tile-value">{stats.deliveredOrders}</div>
+                </div>
+                <div className="stat-tile">
+                  <div className="stat-tile-label">Pendientes</div>
+                  <div className="stat-tile-value">{stats.pendingOrders}</div>
+                </div>
+              </div>
+
+              {stats.topProducts.length > 0 && (
+                <>
+                  <h3>Productos más pedidos</h3>
+                  <div className="bar-list">
+                    {stats.topProducts.map((p) => (
+                      <div className="bar-row" key={p.productName}>
+                        <span className="bar-label">{p.productName}</span>
+                        <div className="bar-track">
+                          <div
+                            className="bar-fill"
+                            style={{
+                              width: `${(p.quantity / stats.topProducts[0].quantity) * 100}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="bar-value">{p.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {stats.deliveriesByDriver.length > 0 && (
+                <>
+                  <h3>Entregas por repartidor</h3>
+                  <ul className="product-list">
+                    {stats.deliveriesByDriver.map((d) => (
+                      <li key={d.driverName} className="product-row">
+                        <span>{d.driverName}</span>
+                        <span className="text-muted">{d.count} entregas</span>
+                        <span />
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </section>
+          )}
 
           <section className="card">
             <h2>Pedidos</h2>
