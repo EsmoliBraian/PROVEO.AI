@@ -5,6 +5,9 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { tenantsRouter } from "./modules/tenants/tenants.routes.js";
 import { productsRouter } from "./modules/products/products.routes.js";
+import { ordersRouter } from "./modules/orders/orders.routes.js";
+import { teamRouter } from "./modules/team/team.routes.js";
+import { whatsappRouter } from "./modules/whatsapp/whatsapp.routes.js";
 
 export function createApp() {
   const app = express();
@@ -18,6 +21,9 @@ export function createApp() {
   app.use("/api/auth", authRouter);
   app.use("/api/tenants", tenantsRouter);
   app.use("/api/products", productsRouter);
+  app.use("/api/orders", ordersRouter);
+  app.use("/api/team", teamRouter);
+  app.use("/api/whatsapp", whatsappRouter);
 
   app.use(errorHandler);
 

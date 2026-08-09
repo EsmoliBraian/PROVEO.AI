@@ -42,3 +42,17 @@ tenantsRouter.patch(
     res.json(await tenantsService.updateSubscriptionStatus(req.params.id, status));
   }),
 );
+
+const whatsappCredentialsSchema = z.object({
+  phoneNumberId: z.string().min(1),
+  wabaId: z.string().min(1),
+  accessToken: z.string().min(1),
+});
+
+tenantsRouter.patch(
+  "/:id/whatsapp",
+  asyncHandler(async (req, res) => {
+    const data = whatsappCredentialsSchema.parse(req.body);
+    res.json(await tenantsService.setWhatsappCredentials(req.params.id, data));
+  }),
+);
