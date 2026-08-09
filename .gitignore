@@ -4,3 +4,4 @@ dist/
 *.tsbuildinfo
 backups/
 .DS_Store
+backend/scratch-*.ts
