@@ -94,38 +94,104 @@ export async function listOrders(tenantId: string) {
   });
 }
 
+export async function getOrderById(tenantId: string, orderId: string) {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, tenantId },
+    include: { items: { include: { product: true } }, assignedDriver: true },
+  });
+  if (!order) throw new HttpError(404, "Pedido no encontrado");
+  return order;
+}
+
+/** Pedidos activos (no entregados/cancelados) asignados a este repartidor. */
 export async function listOrdersForDriver(tenantId: string, driverId: string) {
   return prisma.order.findMany({
-    where: { tenantId, assignedDriverId: driverId, status: "PENDING" },
+    where: { tenantId, assignedDriverId: driverId, status: { in: ["EN_PROCESO", "EN_CAMINO"] } },
     include: { items: { include: { product: true } } },
     orderBy: { receivedAt: "asc" },
   });
 }
 
-export async function assignDriver(tenantId: string, orderId: string, driverId: string | null) {
+export async function getDriverSummary(tenantId: string, driverId: string) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+  const [deliveredToday, deliveredThisWeek] = await Promise.all([
+    prisma.order.count({
+      where: { tenantId, assignedDriverId: driverId, status: "ENTREGADO", deliveredAt: { gte: startOfToday } },
+    }),
+    prisma.order.count({
+      where: { tenantId, assignedDriverId: driverId, status: "ENTREGADO", deliveredAt: { gte: startOfWeek } },
+    }),
+  ]);
+
+  return { deliveredToday, deliveredThisWeek };
+}
+
+const TERMINAL_STATUSES = ["ENTREGADO", "CANCELADO"] as const;
+
+async function getActiveOrder(tenantId: string, orderId: string) {
   const order = await prisma.order.findFirst({ where: { id: orderId, tenantId } });
   if (!order) throw new HttpError(404, "Pedido no encontrado");
+  if (TERMINAL_STATUSES.includes(order.status as (typeof TERMINAL_STATUSES)[number])) {
+    throw new HttpError(400, `El pedido ya está en estado ${order.status}`);
+  }
+  return order;
+}
+
+/** NUEVO → EN_PROCESO al asignar un repartidor (o vuelve a NUEVO si se desasigna). */
+export async function assignDriver(tenantId: string, orderId: string, driverId: string | null) {
+  const order = await getActiveOrder(tenantId, orderId);
 
   if (driverId) {
     const driver = await prisma.user.findFirst({
-      where: { id: driverId, tenantId, role: "REPARTIDOR" },
+      where: { id: driverId, tenantId, role: "REPARTIDOR", active: true },
     });
     if (!driver) throw new HttpError(400, "Repartidor inválido");
   }
 
-  return prisma.order.update({ where: { id: orderId }, data: { assignedDriverId: driverId } });
+  return prisma.order.update({
+    where: { id: orderId },
+    data: {
+      assignedDriverId: driverId,
+      status: driverId ? "EN_PROCESO" : order.status === "EN_PROCESO" ? "NUEVO" : order.status,
+    },
+  });
+}
+
+/** EN_PROCESO → EN_CAMINO — el repartidor salió a entregar. */
+export async function markEnCamino(tenantId: string, orderId: string, driverId?: string) {
+  const order = await getActiveOrder(tenantId, orderId);
+  if (driverId && order.assignedDriverId !== driverId) {
+    throw new HttpError(403, "Este pedido no está asignado a vos");
+  }
+  if (!order.assignedDriverId) {
+    throw new HttpError(400, "El pedido todavía no tiene un repartidor asignado");
+  }
+
+  return prisma.order.update({ where: { id: orderId }, data: { status: "EN_CAMINO" } });
 }
 
 /** driverId se pasa cuando lo llama un REPARTIDOR, para no dejarlo marcar pedidos ajenos. */
 export async function markDelivered(tenantId: string, orderId: string, driverId?: string) {
-  const order = await prisma.order.findFirst({ where: { id: orderId, tenantId } });
-  if (!order) throw new HttpError(404, "Pedido no encontrado");
+  const order = await getActiveOrder(tenantId, orderId);
   if (driverId && order.assignedDriverId !== driverId) {
     throw new HttpError(403, "Este pedido no está asignado a vos");
   }
 
   return prisma.order.update({
     where: { id: orderId },
-    data: { status: "DELIVERED", deliveredAt: new Date() },
+    data: { status: "ENTREGADO", deliveredAt: new Date() },
+  });
+}
+
+export async function cancelOrder(tenantId: string, orderId: string) {
+  await getActiveOrder(tenantId, orderId);
+
+  return prisma.order.update({
+    where: { id: orderId },
+    data: { status: "CANCELADO", cancelledAt: new Date() },
   });
 }

@@ -28,3 +28,13 @@ teamRouter.post(
     res.status(201).json(await teamService.createDriver(req.auth!.tenantId!, data));
   }),
 );
+
+const setActiveSchema = z.object({ active: z.boolean() });
+
+teamRouter.patch(
+  "/drivers/:id",
+  asyncHandler(async (req, res) => {
+    const { active } = setActiveSchema.parse(req.body);
+    res.json(await teamService.setDriverActive(req.auth!.tenantId!, req.params.id, active));
+  }),
+);

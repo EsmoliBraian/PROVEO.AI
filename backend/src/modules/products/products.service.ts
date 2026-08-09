@@ -36,3 +36,11 @@ export async function updateProduct(
 
   return prisma.product.update({ where: { id: productId }, data: input });
 }
+
+/** Usado desde Análisis IA para aceptar una sugerencia de sinónimo. */
+export async function addAlias(tenantId: string, productId: string, alias: string) {
+  const product = await prisma.product.findFirst({ where: { id: productId, tenantId } });
+  if (!product) throw new HttpError(404, "Producto no encontrado");
+
+  return prisma.productAlias.create({ data: { tenantId, productId, alias } });
+}

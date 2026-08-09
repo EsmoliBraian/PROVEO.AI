@@ -42,3 +42,13 @@ productsRouter.patch(
     res.json(await productsService.updateProduct(req.auth!.tenantId!, req.params.id, data));
   }),
 );
+
+const addAliasSchema = z.object({ alias: z.string().min(1) });
+
+productsRouter.post(
+  "/:id/aliases",
+  asyncHandler(async (req, res) => {
+    const { alias } = addAliasSchema.parse(req.body);
+    res.status(201).json(await productsService.addAlias(req.auth!.tenantId!, req.params.id, alias));
+  }),
+);

@@ -21,9 +21,11 @@ enum Role {
 }
 
 enum OrderStatus {
-  PENDING
-  DELIVERED
-  CANCELLED
+  NUEVO
+  EN_PROCESO
+  EN_CAMINO
+  ENTREGADO
+  CANCELADO
 }
 
 /// Un distribuidor (cliente de PROVEO.AI). Toda tabla de negocio cuelga de un tenantId.
@@ -60,6 +62,8 @@ model User {
   email        String? @unique
   phone        String? @unique
   passwordHash String
+  /// Permite desactivar un repartidor sin borrarlo (Configuración → Usuarios y Permisos).
+  active       Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -133,9 +137,10 @@ model Order {
   customerPhone   String
   rawMessage      String
   receivedAt      DateTime
-  status          OrderStatus @default(PENDING)
+  status          OrderStatus @default(NUEVO)
   deliveryAddress String?
   deliveredAt     DateTime?
+  cancelledAt     DateTime?
   customerId      String?
   customer        Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
 

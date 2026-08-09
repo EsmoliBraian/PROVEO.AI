@@ -24,6 +24,23 @@ ordersRouter.get(
   }),
 );
 
+ordersRouter.get(
+  "/mine/summary",
+  requireRole("REPARTIDOR"),
+  asyncHandler(async (req, res) => {
+    res.json(await ordersService.getDriverSummary(req.auth!.tenantId!, req.auth!.userId));
+  }),
+);
+
+// Debe ir después de rutas literales como "/mine" — si no, "/mine" matchea acá con id="mine".
+ordersRouter.get(
+  "/:id",
+  requireRole("TENANT_ADMIN"),
+  asyncHandler(async (req, res) => {
+    res.json(await ordersService.getOrderById(req.auth!.tenantId!, req.params.id));
+  }),
+);
+
 const assignSchema = z.object({ driverId: z.string().nullable() });
 
 ordersRouter.patch(
@@ -36,10 +53,27 @@ ordersRouter.patch(
 );
 
 ordersRouter.patch(
+  "/:id/en-camino",
+  requireRole("TENANT_ADMIN", "REPARTIDOR"),
+  asyncHandler(async (req, res) => {
+    const driverId = req.auth!.role === "REPARTIDOR" ? req.auth!.userId : undefined;
+    res.json(await ordersService.markEnCamino(req.auth!.tenantId!, req.params.id, driverId));
+  }),
+);
+
+ordersRouter.patch(
   "/:id/deliver",
   requireRole("TENANT_ADMIN", "REPARTIDOR"),
   asyncHandler(async (req, res) => {
     const driverId = req.auth!.role === "REPARTIDOR" ? req.auth!.userId : undefined;
     res.json(await ordersService.markDelivered(req.auth!.tenantId!, req.params.id, driverId));
+  }),
+);
+
+ordersRouter.patch(
+  "/:id/cancel",
+  requireRole("TENANT_ADMIN"),
+  asyncHandler(async (req, res) => {
+    res.json(await ordersService.cancelOrder(req.auth!.tenantId!, req.params.id));
   }),
 );
