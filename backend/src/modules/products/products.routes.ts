@@ -32,7 +32,7 @@ productsRouter.post(
 const updateProductSchema = z.object({
   name: z.string().min(1).optional(),
   price: z.number().positive().optional(),
-  active: z.boolean().optional(),
+  stockStatus: z.enum(["DISPONIBLE", "SIN_STOCK", "PAUSADO"]).optional(),
 });
 
 productsRouter.patch(

@@ -26,6 +26,21 @@ enum OrderStatus {
   EN_CAMINO
   ENTREGADO
   CANCELADO
+  /// Confianza de la IA por debajo del umbral — el pedido existe pero un
+  /// humano tiene que revisarlo antes de seguir el flujo normal.
+  REQUIERE_REVISION
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  OTHER
+}
+
+enum ProductStockStatus {
+  DISPONIBLE
+  SIN_STOCK
+  PAUSADO
 }
 
 /// Un distribuidor (cliente de PROVEO.AI). Toda tabla de negocio cuelga de un tenantId.
@@ -40,13 +55,22 @@ model Tenant {
   /// Access token cifrado (ver TOKEN_ENCRYPTION_KEY) — nunca texto plano.
   whatsappAccessToken   String?
 
+  /// Datos reales para que la IA responda consultas frecuentes sin inventar
+  /// (Configuración → Datos del negocio). Null = "no tengo esa información
+  /// configurada todavía" en vez de alucinar una respuesta.
+  businessHours      String?
+  deliveryZone       String?
+  deliveryCost       Decimal? @db.Decimal(10, 2)
+  paymentMethodsInfo String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
-  products  Product[]
-  customers Customer[]
-  orders    Order[]
+  users         User[]
+  products      Product[]
+  customers     Customer[]
+  orders        Order[]
+  conversations Conversation[]
 
   @@index([whatsappPhoneNumberId])
 }
@@ -74,16 +98,16 @@ model User {
 }
 
 model Product {
-  id        String         @id @default(cuid())
-  tenantId  String
-  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name      String
-  price     Decimal        @db.Decimal(10, 2)
-  active    Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  aliases   ProductAlias[]
-  orderItems OrderItem[]
+  id          String              @id @default(cuid())
+  tenantId    String
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  price       Decimal             @db.Decimal(10, 2)
+  stockStatus ProductStockStatus  @default(DISPONIBLE)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  aliases     ProductAlias[]
+  orderItems  OrderItem[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -139,6 +163,7 @@ model Order {
   receivedAt      DateTime
   status          OrderStatus @default(NUEVO)
   deliveryAddress String?
+  paymentMethod   PaymentMethod?
   deliveredAt     DateTime?
   cancelledAt     DateTime?
   customerId      String?
@@ -155,6 +180,8 @@ model Order {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   items     OrderItem[]
+  /// Conversación que originó este pedido, una vez confirmado (ver Conversation.linkedOrderId).
+  conversation Conversation?
 
   @@index([tenantId, status, receivedAt])
   @@index([tenantId, customerPhone, receivedAt])
@@ -172,4 +199,37 @@ model OrderItem {
   matched     Boolean  @default(true)
 
   @@index([orderId])
+}
+
+/// Un hilo de WhatsApp por (tenant, customerPhone) — persiste entre mensajes
+/// para que la IA conserve contexto, arme el pedido de a poco y solo lo
+/// confirme cuando el cliente lo pide explícitamente.
+model Conversation {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerPhone  String
+  /// Carrito en construcción — mismo shape que los ítems de Order, todavía sin confirmar.
+  draftItems     Json?
+  lastIntent     String?
+  lastConfidence Float?
+  linkedOrderId  String?  @unique
+  linkedOrder    Order?   @relation(fields: [linkedOrderId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  messages       ConversationMessage[]
+
+  @@unique([tenantId, customerPhone])
+}
+
+model ConversationMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// "customer" | "assistant"
+  role           String
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
 }

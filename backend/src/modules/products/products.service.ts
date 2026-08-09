@@ -29,7 +29,7 @@ export async function createProduct(
 export async function updateProduct(
   tenantId: string,
   productId: string,
-  input: { name?: string; price?: number; active?: boolean },
+  input: { name?: string; price?: number; stockStatus?: "DISPONIBLE" | "SIN_STOCK" | "PAUSADO" },
 ) {
   const existing = await prisma.product.findFirst({ where: { id: productId, tenantId } });
   if (!existing) throw new HttpError(404, "Producto no encontrado");

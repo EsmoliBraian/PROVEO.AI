@@ -10,6 +10,7 @@ import { teamRouter } from "./modules/team/team.routes.js";
 import { whatsappRouter } from "./modules/whatsapp/whatsapp.routes.js";
 import { statsRouter } from "./modules/stats/stats.routes.js";
 import { analysisRouter } from "./modules/analysis/analysis.routes.js";
+import { settingsRouter } from "./modules/settings/settings.routes.js";
 
 export function createApp() {
   const app = express();
@@ -28,6 +29,7 @@ export function createApp() {
   app.use("/api/whatsapp", whatsappRouter);
   app.use("/api/stats", statsRouter);
   app.use("/api/analysis", analysisRouter);
+  app.use("/api/settings", settingsRouter);
 
   app.use(errorHandler);
 

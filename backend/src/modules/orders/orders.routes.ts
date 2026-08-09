@@ -41,6 +41,17 @@ ordersRouter.get(
   }),
 );
 
+const updateDetailsSchema = z.object({ paymentMethod: z.enum(["CASH", "TRANSFER", "OTHER"]).nullable() });
+
+ordersRouter.patch(
+  "/:id",
+  requireRole("TENANT_ADMIN"),
+  asyncHandler(async (req, res) => {
+    const data = updateDetailsSchema.parse(req.body);
+    res.json(await ordersService.updateOrderDetails(req.auth!.tenantId!, req.params.id, data));
+  }),
+);
+
 const assignSchema = z.object({ driverId: z.string().nullable() });
 
 ordersRouter.patch(

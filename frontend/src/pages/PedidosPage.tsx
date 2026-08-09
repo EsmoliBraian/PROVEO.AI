@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { StatusPill } from "../components/StatusPill";
-import { ORDER_STATUS_LABELS, type Order, type OrderStatus } from "../types/models";
+import { PAYMENT_METHOD_LABELS, type Order, type OrderStatus } from "../types/models";
 
 const TABS: { key: OrderStatus | "TODOS"; label: string }[] = [
   { key: "TODOS", label: "Todos" },
   { key: "NUEVO", label: "Nuevos" },
+  { key: "REQUIERE_REVISION", label: "Requiere revisión" },
   { key: "EN_PROCESO", label: "En Proceso" },
   { key: "EN_CAMINO", label: "En Camino" },
   { key: "ENTREGADO", label: "Entregados" },
@@ -81,6 +82,7 @@ export function PedidosPage() {
                 <th>Cliente</th>
                 <th>Productos</th>
                 <th>Estado</th>
+                <th>Pago</th>
                 <th>Repartidor</th>
                 <th>Hora</th>
               </tr>
@@ -95,6 +97,7 @@ export function PedidosPage() {
                   <td>
                     <StatusPill status={o.status} />
                   </td>
+                  <td className="text-muted">{o.paymentMethod ? PAYMENT_METHOD_LABELS[o.paymentMethod] : "-"}</td>
                   <td className="text-muted">{o.assignedDriver?.name ?? "-"}</td>
                   <td className="text-muted">{new Date(o.receivedAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</td>
                 </tr>

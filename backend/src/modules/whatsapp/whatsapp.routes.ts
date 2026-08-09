@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { decryptSecret } from "../../lib/crypto.js";
 import { env } from "../../config/env.js";
 import { asyncHandler } from "../../middleware/errorHandler.js";
-import * as ordersService from "../orders/orders.service.js";
+import * as assistantService from "../conversation/assistant.service.js";
 import { sendWhatsAppMessage, toWhatsAppRecipient } from "./whatsappClient.js";
 
 export const whatsappRouter = Router();
@@ -55,11 +55,10 @@ whatsappRouter.post(
     // webhook que no confirma recepción, y el pedido ya quedaría perdido de
     // todos modos si reintentara con el mismo mensaje.
     try {
-      const { replyText } = await ordersService.createOrderFromWhatsapp({
+      const { replyText } = await assistantService.handleIncomingMessage({
         tenantId: tenant.id,
         customerPhone: message.from,
-        rawMessage: message.text.body,
-        waMessageId: message.id,
+        messageText: message.text.body,
         receivedAt: new Date(Number(message.timestamp) * 1000),
       });
 

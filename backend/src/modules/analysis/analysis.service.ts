@@ -81,7 +81,7 @@ export async function suggestAliases(tenantId: string): Promise<AliasSuggestion[
       where: { order: { tenantId }, matched: false },
       select: { rawFragment: true },
     }),
-    prisma.product.findMany({ where: { tenantId, active: true }, select: { id: true, name: true } }),
+    prisma.product.findMany({ where: { tenantId, stockStatus: "DISPONIBLE" }, select: { id: true, name: true } }),
   ]);
 
   if (unmatchedItems.length === 0 || products.length === 0) return [];

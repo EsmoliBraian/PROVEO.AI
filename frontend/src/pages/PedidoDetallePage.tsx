@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { IconArrowLeft } from "../components/icons";
 import { StatusPill } from "../components/StatusPill";
-import type { Driver, Order } from "../types/models";
+import { PAYMENT_METHOD_LABELS, type Driver, type Order, type PaymentMethod } from "../types/models";
 
 export function PedidoDetallePage() {
   const { id } = useParams<{ id: string }>();
@@ -67,8 +67,21 @@ export function PedidoDetallePage() {
         </div>
 
         <div className="card">
-          <h2>WhatsApp original</h2>
-          <p className="whatsapp-bubble">{order.rawMessage}</p>
+          <h2>Conversación de WhatsApp</h2>
+          {order.conversation && order.conversation.messages.length > 0 ? (
+            <div className="conversation-thread">
+              {order.conversation.messages.map((m) => (
+                <p
+                  key={m.id}
+                  className={m.role === "customer" ? "whatsapp-bubble" : "whatsapp-bubble whatsapp-bubble-bot"}
+                >
+                  {m.content}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="whatsapp-bubble">{order.rawMessage}</p>
+          )}
 
           <h2>Interpretación IA</h2>
           {order.aiConfidence != null ? (
@@ -78,13 +91,31 @@ export function PedidoDetallePage() {
           ) : (
             <p className="text-muted">Sin datos de confianza.</p>
           )}
+
+          <h2>Método de pago</h2>
+          <select
+            className="field-input"
+            value={order.paymentMethod ?? ""}
+            onChange={(e) =>
+              runAction(() =>
+                api.patch(`/orders/${order.id}`, { paymentMethod: (e.target.value as PaymentMethod) || null }),
+              )
+            }
+          >
+            <option value="">Sin especificar</option>
+            {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="card">
         <h2>Acciones</h2>
         <div className="action-row">
-          {(order.status === "NUEVO" || order.status === "EN_PROCESO") && (
+          {(order.status === "NUEVO" || order.status === "EN_PROCESO" || order.status === "REQUIERE_REVISION") && (
             <select
               className="field-input"
               value={order.assignedDriver?.id ?? ""}

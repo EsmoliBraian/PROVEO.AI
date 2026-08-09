@@ -2,9 +2,11 @@ import { prisma } from "../../lib/prisma.js";
 import { HttpError } from "../../middleware/errorHandler.js";
 import { interpretOrderMessage, type CatalogEntry } from "./orderInterpreter.js";
 
-async function getCatalog(tenantId: string): Promise<CatalogEntry[]> {
+/** Catálogo de productos vendibles (no pausados/sin stock) — usado tanto por
+ * el parser viejo de un solo mensaje como por el motor conversacional nuevo. */
+export async function getCatalog(tenantId: string): Promise<CatalogEntry[]> {
   const products = await prisma.product.findMany({
-    where: { tenantId, active: true },
+    where: { tenantId, stockStatus: "DISPONIBLE" },
     include: { aliases: true },
   });
   return products.map((p) => ({
@@ -86,6 +88,47 @@ export async function createOrderFromWhatsapp(input: CreateOrderFromWhatsappInpu
   return { order, replyText };
 }
 
+export interface DraftOrderItem {
+  productId: string | null;
+  rawFragment: string;
+  quantity: number;
+  matched: boolean;
+}
+
+/** Crea el Order definitivo recién cuando el cliente confirmó explícitamente
+ * el carrito armado en la conversación — nunca antes. Baja confianza entra
+ * directo en REQUIERE_REVISION en vez de NUEVO. */
+export async function createOrderFromDraft(input: {
+  tenantId: string;
+  customerPhone: string;
+  rawMessage: string;
+  receivedAt: Date;
+  items: DraftOrderItem[];
+  confidence: number;
+}) {
+  const lowConfidence = input.confidence < 0.7 || input.items.some((i) => !i.matched);
+
+  return prisma.order.create({
+    data: {
+      tenantId: input.tenantId,
+      customerPhone: input.customerPhone,
+      rawMessage: input.rawMessage,
+      receivedAt: input.receivedAt,
+      aiConfidence: input.confidence,
+      status: lowConfidence ? "REQUIERE_REVISION" : "NUEVO",
+      items: {
+        create: input.items.map((item) => ({
+          productId: item.productId,
+          rawFragment: item.rawFragment,
+          quantity: item.quantity,
+          matched: item.matched,
+        })),
+      },
+    },
+    include: { items: true },
+  });
+}
+
 export async function listOrders(tenantId: string) {
   return prisma.order.findMany({
     where: { tenantId },
@@ -97,7 +140,11 @@ export async function listOrders(tenantId: string) {
 export async function getOrderById(tenantId: string, orderId: string) {
   const order = await prisma.order.findFirst({
     where: { id: orderId, tenantId },
-    include: { items: { include: { product: true } }, assignedDriver: true },
+    include: {
+      items: { include: { product: true } },
+      assignedDriver: true,
+      conversation: { include: { messages: { orderBy: { createdAt: "asc" } } } },
+    },
   });
   if (!order) throw new HttpError(404, "Pedido no encontrado");
   return order;
@@ -128,6 +175,17 @@ export async function getDriverSummary(tenantId: string, driverId: string) {
   ]);
 
   return { deliveredToday, deliveredThisWeek };
+}
+
+export async function updateOrderDetails(
+  tenantId: string,
+  orderId: string,
+  input: { paymentMethod: "CASH" | "TRANSFER" | "OTHER" | null },
+) {
+  const order = await prisma.order.findFirst({ where: { id: orderId, tenantId } });
+  if (!order) throw new HttpError(404, "Pedido no encontrado");
+
+  return prisma.order.update({ where: { id: orderId }, data: input });
 }
 
 const TERMINAL_STATUSES = ["ENTREGADO", "CANCELADO"] as const;
